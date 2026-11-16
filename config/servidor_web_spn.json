@@ -1,0 +1,507 @@
+{
+  "modelName": "Servidor Web com Fila Limitada",
+  "places": [
+    {
+      "name": "Arriving",
+      "initialMarking": 0,
+      "stringMarking": "0",
+      "initialStringMarking": "0",
+      "id": "p1",
+      "x": 180,
+      "y": 260
+    },
+    {
+      "name": "Slots",
+      "initialMarking": 12,
+      "stringMarking": "SYSTEM_CAPACITY",
+      "initialStringMarking": "SYSTEM_CAPACITY",
+      "id": "p2",
+      "x": 390,
+      "y": 150
+    },
+    {
+      "name": "Queue",
+      "initialMarking": 0,
+      "stringMarking": "0",
+      "initialStringMarking": "0",
+      "id": "p3",
+      "x": 620,
+      "y": 260
+    },
+    {
+      "name": "IdleServers",
+      "initialMarking": 2,
+      "stringMarking": "NUM_SERVERS",
+      "initialStringMarking": "NUM_SERVERS",
+      "id": "p4",
+      "x": 620,
+      "y": 120
+    },
+    {
+      "name": "InService",
+      "initialMarking": 0,
+      "stringMarking": "0",
+      "initialStringMarking": "0",
+      "id": "p5",
+      "x": 860,
+      "y": 260
+    },
+    {
+      "name": "Completed",
+      "initialMarking": 0,
+      "stringMarking": "0",
+      "initialStringMarking": "0",
+      "id": "p6",
+      "x": 1110,
+      "y": 180
+    },
+    {
+      "name": "Dropped",
+      "initialMarking": 0,
+      "stringMarking": "0",
+      "initialStringMarking": "0",
+      "id": "p7",
+      "x": 620,
+      "y": 470
+    }
+  ],
+  "definitions": [
+    {
+      "name": "ARRIVAL_DELAY",
+      "type": "DOUBLE",
+      "value": "1.25",
+      "id": "def1"
+    },
+    {
+      "name": "SERVICE_TIME",
+      "type": "DOUBLE",
+      "value": "1.25",
+      "id": "def2"
+    },
+    {
+      "name": "NUM_SERVERS",
+      "type": "INTEGER",
+      "value": "2",
+      "id": "def3"
+    },
+    {
+      "name": "QUEUE_CAPACITY",
+      "type": "INTEGER",
+      "value": "10",
+      "id": "def4"
+    },
+    {
+      "name": "SYSTEM_CAPACITY",
+      "type": "INTEGER",
+      "value": "12",
+      "id": "def5"
+    },
+    {
+      "name": "DROP_PASSAGE",
+      "type": "DOUBLE",
+      "value": "0.0001",
+      "id": "def6"
+    }
+  ],
+  "rewardMeasures": [
+    {
+      "name": "TP",
+      "expression": "E{#InService} / SERVICE_TIME",
+      "id": "rm1"
+    },
+    {
+      "name": "MRT",
+      "expression": "IF (1 - P{#Slots = 0}) > 0 THEN (E{#Queue} + E{#InService}) * ARRIVAL_DELAY / (1 - P{#Slots = 0}) ELSE 0",
+      "id": "rm2"
+    },
+    {
+      "name": "MQT",
+      "expression": "IF E{#InService} > 0 THEN E{#Queue} / (E{#InService} / SERVICE_TIME) ELSE 0",
+      "id": "rm3"
+    },
+    {
+      "name": "U",
+      "expression": "(E{#InService} / NUM_SERVERS) * 100",
+      "id": "rm4"
+    },
+    {
+      "name": "DP",
+      "expression": "P{#Slots = 0} * 100",
+      "id": "rm5"
+    },
+    {
+      "name": "MPT",
+      "expression": "SERVICE_TIME",
+      "id": "rm6"
+    }
+  ],
+  "transitions": [
+    {
+      "name": "Arrival",
+      "type": "TIMED",
+      "firingPolicy": "SINGLE_SERVER",
+      "raceType": "RACE_WITH_ENABLING_MEMORY",
+      "priority": 1,
+      "inputArcs": [],
+      "outputArcs": [
+        {
+          "type": "OUTPUT",
+          "place": "Arriving",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "inhibitorArcs": [],
+      "distribution": {
+        "type": "exponential",
+        "parameters": {
+          "Mean delay": "ARRIVAL_DELAY"
+        }
+      },
+      "id": "t1",
+      "x": 80,
+      "y": 260,
+      "labelX": 80,
+      "labelY": 300
+    },
+    {
+      "name": "Accept",
+      "type": "IMMEDIATE",
+      "firingPolicy": "SINGLE_SERVER",
+      "raceType": "RACE_WITH_ENABLING_MEMORY",
+      "priority": 1,
+      "weight": 1,
+      "inputArcs": [
+        {
+          "type": "INPUT",
+          "place": "Arriving",
+          "multiplicity": 1,
+          "weight": 1
+        },
+        {
+          "type": "INPUT",
+          "place": "Slots",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "outputArcs": [
+        {
+          "type": "OUTPUT",
+          "place": "Queue",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "inhibitorArcs": [],
+      "id": "t2",
+      "x": 390,
+      "y": 260,
+      "labelX": 390,
+      "labelY": 300
+    },
+    {
+      "name": "Reject",
+      "type": "IMMEDIATE",
+      "firingPolicy": "SINGLE_SERVER",
+      "raceType": "RACE_WITH_ENABLING_MEMORY",
+      "priority": 1,
+      "weight": 1,
+      "inputArcs": [
+        {
+          "type": "INPUT",
+          "place": "Arriving",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "outputArcs": [
+        {
+          "type": "OUTPUT",
+          "place": "Dropped",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "inhibitorArcs": [
+        {
+          "type": "INHIBITOR",
+          "place": "Slots",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "id": "t3",
+      "x": 390,
+      "y": 470,
+      "labelX": 390,
+      "labelY": 510
+    },
+    {
+      "name": "StartService",
+      "type": "IMMEDIATE",
+      "firingPolicy": "SINGLE_SERVER",
+      "raceType": "RACE_WITH_ENABLING_MEMORY",
+      "priority": 1,
+      "weight": 1,
+      "inputArcs": [
+        {
+          "type": "INPUT",
+          "place": "Queue",
+          "multiplicity": 1,
+          "weight": 1
+        },
+        {
+          "type": "INPUT",
+          "place": "IdleServers",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "outputArcs": [
+        {
+          "type": "OUTPUT",
+          "place": "InService",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "inhibitorArcs": [],
+      "id": "t4",
+      "x": 740,
+      "y": 260,
+      "labelX": 740,
+      "labelY": 300
+    },
+    {
+      "name": "FinishService",
+      "type": "TIMED",
+      "firingPolicy": "INFINITY_SERVER",
+      "raceType": "RACE_WITH_ENABLING_MEMORY",
+      "priority": 1,
+      "inputArcs": [
+        {
+          "type": "INPUT",
+          "place": "InService",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "outputArcs": [
+        {
+          "type": "OUTPUT",
+          "place": "IdleServers",
+          "multiplicity": 1,
+          "weight": 1
+        },
+        {
+          "type": "OUTPUT",
+          "place": "Slots",
+          "multiplicity": 1,
+          "weight": 1
+        },
+        {
+          "type": "OUTPUT",
+          "place": "Completed",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "inhibitorArcs": [],
+      "distribution": {
+        "type": "exponential",
+        "parameters": {
+          "Mean delay": "SERVICE_TIME"
+        }
+      },
+      "id": "t5",
+      "x": 980,
+      "y": 260,
+      "labelX": 980,
+      "labelY": 300
+    },
+    {
+      "name": "Discard",
+      "type": "TIMED",
+      "firingPolicy": "INFINITY_SERVER",
+      "raceType": "RACE_WITH_ENABLING_MEMORY",
+      "priority": 1,
+      "inputArcs": [
+        {
+          "type": "INPUT",
+          "place": "Dropped",
+          "multiplicity": 1,
+          "weight": 1
+        }
+      ],
+      "outputArcs": [],
+      "inhibitorArcs": [],
+      "distribution": {
+        "type": "exponential",
+        "parameters": {
+          "Mean delay": "DROP_PASSAGE"
+        }
+      },
+      "id": "t6",
+      "x": 840,
+      "y": 470,
+      "labelX": 840,
+      "labelY": 510
+    }
+  ],
+  "visualElements": [],
+  "arcs": [
+    {
+      "id": "a1",
+      "source": "t1",
+      "target": "p1",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a2",
+      "source": "p1",
+      "target": "t2",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a3",
+      "source": "p2",
+      "target": "t2",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "bottom",
+      "targetAnchorAngle": 270,
+      "lineType": "straight"
+    },
+    {
+      "id": "a4",
+      "source": "t2",
+      "target": "p3",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a5",
+      "source": "p1",
+      "target": "t3",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "bottom",
+      "targetAnchorAngle": 90,
+      "lineType": "straight"
+    },
+    {
+      "id": "a6",
+      "source": "p2",
+      "target": "t3",
+      "type": "inhibitor",
+      "weight": "1",
+      "sourceAnchor": "bottom",
+      "targetAnchorAngle": 270,
+      "lineType": "straight"
+    },
+    {
+      "id": "a7",
+      "source": "t3",
+      "target": "p7",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "bottom",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a8",
+      "source": "p3",
+      "target": "t4",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a9",
+      "source": "p4",
+      "target": "t4",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "bottom",
+      "targetAnchorAngle": 270,
+      "lineType": "straight"
+    },
+    {
+      "id": "a10",
+      "source": "t4",
+      "target": "p5",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a11",
+      "source": "p5",
+      "target": "t5",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    },
+    {
+      "id": "a12",
+      "source": "t5",
+      "target": "p4",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "top",
+      "targetAnchorAngle": 270,
+      "lineType": "straight"
+    },
+    {
+      "id": "a13",
+      "source": "t5",
+      "target": "p2",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "top",
+      "targetAnchorAngle": 270,
+      "lineType": "straight"
+    },
+    {
+      "id": "a14",
+      "source": "t5",
+      "target": "p6",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "top",
+      "targetAnchorAngle": 270,
+      "lineType": "straight"
+    },
+    {
+      "id": "a15",
+      "source": "p7",
+      "target": "t6",
+      "type": "normal",
+      "weight": "1",
+      "sourceAnchor": "right",
+      "targetAnchorAngle": 180,
+      "lineType": "straight"
+    }
+  ],
+  "chartSquare": false,
+  "executions": []
+}
